@@ -3,7 +3,8 @@ import 'package:dio/dio.dart';
 class ApiService {
   late Dio _dio;
   ApiService() {
-    const base = 'http://localhost:3000/api';
+    // const base = 'http://localhost:3000/api';
+    const base = 'https://sensor.gertu.mn:5000/api';
     _dio = Dio(
       BaseOptions(baseUrl: base, headers: {"Content-Type": "application/json"}),
     );

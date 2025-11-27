@@ -6,8 +6,8 @@ import 'package:mqtt_client/mqtt_client.dart';
 import 'package:mqtt_client/mqtt_browser_client.dart';
 import 'package:typed_data/typed_buffers.dart';
 
-const String brokerHost = '103.50.205.187';
-const int wsPort = 9001;
+const String brokerHost = 'sensor.gertu.mn';
+const int wsPort = 443;
 
 class MqttService {
   late final MqttBrowserClient client;
@@ -28,7 +28,7 @@ class MqttService {
     }
 
     client = MqttBrowserClient(
-      'ws://$brokerHost',
+      'wss://$brokerHost/mqtt/',
       'flutter_web_${DateTime.now().millisecondsSinceEpoch}',
     );
 
@@ -57,7 +57,7 @@ class MqttService {
       return;
     }
 
-    print('MQTT: connecting to ws://$brokerHost:$wsPort ...');
+    print('MQTT: connecting to wss://$brokerHost:$wsPort/mqtt/ ...');
 
     try {
       await client.connect();

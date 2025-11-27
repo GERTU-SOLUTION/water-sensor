@@ -6,6 +6,8 @@ import 'package:water_sensor/services/api_service.dart';
 import 'package:water_sensor/services/mqtt_service.dart';
 import 'package:water_sensor/services/io_polling_controller.dart';
 import 'package:model_viewer_plus/model_viewer_plus.dart';
+import 'package:water_sensor/services/notification_service.dart';
+import 'package:water_sensor/services/sound_service.dart';
 
 void main() {
   runApp(const MyApp());
@@ -63,8 +65,10 @@ class _MyHomePageState extends State<MyHomePage> {
 
     _mqtt = MqttService();
 
+    webNotification.requestPermission();
+
     _modules = List<IoModule>.generate(
-      14,
+      3,
       (i) => IoModule(ip: 'sensor01', addr: i + 1),
     );
 
@@ -93,7 +97,7 @@ class _MyHomePageState extends State<MyHomePage> {
     _mqttSub = _mqtt.messages
         .where((m) => m.topic == 'devices/sensor01/tx')
         .listen(
-          (msg) {
+          (msg) { 
             final hex = msg.hex.trim();
             final parts = hex.split(RegExp(r'\s+'));
 
@@ -162,9 +166,17 @@ class _MyHomePageState extends State<MyHomePage> {
 
   void _setStorageStatus(String code, bool isActive) {
     if (isActive) {
+      final wasEmpty = _activeStorageCodes.isEmpty;
       _activeStorageCodes.add(code);
+      if (wasEmpty) {
+        soundService.start();
+      }
+      webNotification.show('Ус мэдрэгч', '$code дахь агуулах ус мэдэрлээ');
     } else {
       _activeStorageCodes.remove(code);
+      if (_activeStorageCodes.isEmpty) {
+        soundService.stop();
+      }
     }
 
     apiService.updateStorageStatus(code, isActive);
@@ -445,7 +457,7 @@ class _MyHomePageState extends State<MyHomePage> {
                         src: 'assets/3d/sensor.glb',
                         alt: 'Ус мэдрэгч',
                         ar: true,
-                        cameraControls: false,
+                        // cameraControls: false,
                         autoRotate: false,
                         cameraOrbit: '0deg 20deg 65%',
                         fieldOfView: '25deg',

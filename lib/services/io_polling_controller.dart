@@ -110,7 +110,7 @@ class IoPollingController {
           print("[TX] sending -> ${item.topic}  ${item.hex}");
 
           mqtt.publishHex(item.topic, item.hex);
-          await Future.delayed(const Duration(milliseconds: 1000));
+          await Future.delayed(const Duration(milliseconds: 700));
           continue;
         }
 

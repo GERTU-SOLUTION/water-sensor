@@ -5,7 +5,7 @@ services:
     restart: unless-stopped
     ports:
       - "1887:1883" # TCP MQTT
-      - "9001:9001" # WebSocket MQTT
+      - "9006:9001" # WebSocket MQTT
     volumes:
       - ./mosquitto/config:/mosquitto/config # бүх config dir-ийг өгнө
       - ./mosquitto/data:/mosquitto/data

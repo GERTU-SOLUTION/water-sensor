@@ -58,6 +58,10 @@ class _MyHomePageState extends State<MyHomePage> {
     text: 'devices/sensor01/tx',
   );
 
+  final Set<String> _group1Codes = {}; // addr 01,02,03,04
+  final Set<String> _group2Codes = {}; // addr 05,06,07,08
+  final Set<String> _group3Codes = {}; // addr 09,10,11
+  final Set<String> _group4Codes = {}; // addr 12,13,14
   @override
   void initState() {
     super.initState();
@@ -97,7 +101,7 @@ class _MyHomePageState extends State<MyHomePage> {
     _mqttSub = _mqtt.messages
         .where((m) => m.topic == 'devices/sensor01/tx')
         .listen(
-          (msg) { 
+          (msg) {
             final hex = msg.hex.trim();
             final parts = hex.split(RegExp(r'\s+'));
 
@@ -115,7 +119,6 @@ class _MyHomePageState extends State<MyHomePage> {
                 .toUpperCase();
 
             final int byteCount = int.parse(parts[2], radix: 16);
-
             final dataBytes = <int>[];
             for (int i = 0; i < byteCount; i++) {
               dataBytes.add(int.parse(parts[3 + i], radix: 16));
@@ -140,6 +143,7 @@ class _MyHomePageState extends State<MyHomePage> {
               if (!existingCodes.contains(code)) {
                 applyCodeColor(code); // UI
                 _setStorageStatus(code, true); // DB + list → true
+                _handleGroupOn(code);
               }
             }
 
@@ -148,9 +152,9 @@ class _MyHomePageState extends State<MyHomePage> {
               final stillActive = codesForDevice.contains(code);
               if (!stillActive) {
                 // UI дээр унтраах бол энд:
-                // clearCodeColor(code);
                 debugPrint('🔻 $addr / $code -> false');
                 _setStorageStatus(code, false);
+                _handleGroupOff(code);
               }
             }
 
@@ -209,6 +213,91 @@ class _MyHomePageState extends State<MyHomePage> {
     _topicPubController.dispose();
     _topicSubController.dispose();
     super.dispose();
+  }
+
+  void _handleGroupOn(String code) {
+    final addrHex = code.substring(0, 2); // "01"
+    final addrDec = int.parse(addrHex, radix: 16); // 0x01 -> 1
+
+    if (addrDec >= 1 && addrDec <= 4) {
+      _addToGroup(_group1Codes, code, groupId: 1);
+    } else if (addrDec >= 5 && addrDec <= 8) {
+      _addToGroup(_group2Codes, code, groupId: 2);
+    } else if (addrDec >= 9 && addrDec <= 11) {
+      _addToGroup(_group3Codes, code, groupId: 3);
+    } else if (addrDec >= 12 && addrDec <= 14) {
+      _addToGroup(_group4Codes, code, groupId: 4);
+    } else {}
+  }
+
+  void _handleGroupOff(String code) {
+    final addrHex = code.substring(0, 2);
+    final addrDec = int.parse(addrHex, radix: 16);
+
+    if (addrDec >= 1 && addrDec <= 4) {
+      _removeFromGroup(_group1Codes, code, groupId: 1);
+    } else if (addrDec >= 5 && addrDec <= 8) {
+      _removeFromGroup(_group2Codes, code, groupId: 2);
+    } else if (addrDec >= 9 && addrDec <= 11) {
+      _removeFromGroup(_group3Codes, code, groupId: 3);
+    } else if (addrDec >= 12 && addrDec <= 14) {
+      _removeFromGroup(_group4Codes, code, groupId: 4);
+    } else {}
+  }
+
+  void _addToGroup(
+    Set<String> groupCodes,
+    String code, {
+    required int groupId,
+  }) {
+    final wasEmpty = groupCodes.isEmpty;
+    groupCodes.add(code);
+
+    if (wasEmpty && groupCodes.isNotEmpty) {
+      // Энэ группийн хамгийн анхны мэдрэгч ус мэдэрлээ
+      print('💧 GROUP $groupId → ON команд явуулна');
+      _publishGroupOn(groupId);
+    }
+  }
+
+  void _removeFromGroup(
+    Set<String> groupCodes,
+    String code, {
+    required int groupId,
+  }) {
+    groupCodes.remove(code);
+
+    if (groupCodes.isEmpty) {
+      // Энэ группийн бүх мэдрэгчид усгүй боллоо
+      print('✅ GROUP $groupId → OFF команд явуулна');
+      _publishGroupOff(groupId);
+    }
+  }
+
+  void _publishGroupOn(int groupId) {
+    final topic = _topicPubController.text.trim();
+
+    if (groupId == 1)
+      _mqtt.publishHex(topic, '01 05 00 00 FF 00 8C 3A');
+    else if (groupId == 2)
+      _mqtt.publishHex(topic, '02 05 00 00 FF 00 8C 09');
+    else if (groupId == 3)
+      _mqtt.publishHex(topic, '03 05 00 00 FF 00 8D D8');
+    else if (groupId == 4)
+      _mqtt.publishHex(topic, '04 05 00 00 FF 00 8C 3A');
+  }
+
+  void _publishGroupOff(int groupId) {
+    final topic = _topicPubController.text.trim();
+
+    if (groupId == 1)
+      _mqtt.publishHex(topic, '01 05 00 00 00 00 CD CA');
+    else if (groupId == 2)
+      _mqtt.publishHex(topic, '02 05 00 00 00 00 CD F9');
+    else if (groupId == 3)
+      _mqtt.publishHex(topic, '03 05 00 00 00 00 CC 28');
+    else if (groupId == 4)
+      _mqtt.publishHex(topic, '04 05 00 00 00 00 4D CA');
   }
 
   Widget _buildAlarmList() {
